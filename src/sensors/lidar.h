@@ -90,7 +90,7 @@ struct Lidar
 		maxDistance = 50;
 		resoultion = 0.2;
 		// TODO:: set sderr to 0.2 to get more interesting pcd files
-		sderr = 0.2;
+		sderr = 0.1;
 		cars = setCars;
 		groundSlope = setGroundSlope;
 

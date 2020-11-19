@@ -1,6 +1,7 @@
 // PCL lib Functions for processing point clouds 
 
 #include "processPointClouds.h"
+#include <pcl/filters/extract_indices.h>
 
 
 //constructor:
@@ -42,8 +43,16 @@ template<typename PointT>
 std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::SeparateClouds(pcl::PointIndices::Ptr inliers, typename pcl::PointCloud<PointT>::Ptr cloud) 
 {
   // TODO: Create two new point clouds, one cloud with obstacles and other with segmented plane
+    pcl::PointCloud<pcl::PointXYZ>::Ptr positives(new pcl::PointCloud<pcl::PointXYZ>), negatives(new pcl::PointCloud<pcl::PointXYZ>);
+    pcl::ExtractIndices<pcl::PointXYZ> extract;
+    extract.setInputCloud(cloud);
+    extract.setIndices(inliers);
+    extract.setNegative(false);
+    extract.filter(*positives);
+    extract.setNegative(true);
+    extract.filter(*negatives);
 
-    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult(cloud, cloud);
+    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult(positives, negatives);
     return segResult;
 }
 
@@ -53,7 +62,6 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 {
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
-    // TODO:: Fill in this function to find inliers for the cloud.
 
     pcl::SACSegmentation<PointT> seg;
     pcl::PointIndices::Ptr inliers {new pcl::PointIndices};
@@ -67,6 +75,7 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
 
     seg.setInputCloud(cloud);
     seg.segment(*inliers,*coefficients);
+    
     if(inliers->indices.size()==0)
     {
         std::cout << "Could not estimate a planar model" << std::endl;
