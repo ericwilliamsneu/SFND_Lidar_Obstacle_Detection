@@ -61,23 +61,95 @@ pcl::visualization::PCLVisualizer::Ptr initScene()
   	return viewer;
 }
 
-std::unordered_set<int> Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+struct RANSAC_result
 {
-	std::unordered_set<int> inliersResult;
-	srand(time(NULL));
-	
-	// TODO: Fill in this function
+    std::unordered_set<int> inliers;
+    std::pair<int,int> keyPoints;
+};
 
-	// For max iterations 
+RANSAC_result Ransac(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, int maxIterations, float distanceTol)
+{
+    RANSAC_result result;
+    int numPoints = cloud->points.size();
+    std::vector < std::pair<int, int> > lines;
+    std::pair <int, int> line;
+    std::vector <int> inlierCount;
+    int numInliers = 0;
+    int maxInliers = 0;
+    int maxInlierLocation = 0;
+    std::vector <pcl::PointXYZ> inliers;
+    int rand_a = rand() % numPoints;
+    int rand_b = rand() % numPoints;
+    float A=0.0, B=0.0, C=0.0;
+    float distance = 0.0;
+    float denominator = 0.0;
+    pcl::PointXYZ pointA, pointB;
+    int i = 0, j = 0, k = 0;
 
-	// Randomly sample subset and fit line
+    srand(time(NULL));
 
-	// Measure distance between every point and fitted line
-	// If distance is smaller than threshold count it as inlier
+    for (int i = 0; i < maxIterations; i++)
+    {
+        rand_a = rand() % numPoints;
+        rand_b = rand() % numPoints;
+        while (rand_a == rand_b) rand_b = rand() % numPoints;
+        line.first = rand_a;
+        line.second = rand_b;
+        std::cout << "Iteration #" << i << ":(Point_1=" << rand_a << ") & (Point_2=" << rand_b << ")" << std::endl;
+        pointA = cloud->points[rand_a];
+        pointB = cloud->points[rand_b];
+        std::cout << "Point_1=(X:" << pointA.x << ",Y:" << pointA.y << ")//Point_2=(X:" << pointB.x << ",Y:" << pointB.y << ")" << std::endl;
+        A = pointA.y - pointB.y;
+        B = pointB.x - pointA.x;
+        C = ((pointA.x - pointB.x) * pointA.y) + ((pointB.y - pointA.y) * pointA.x);
+        std::cout << "A: " << A << " B: " << B << " C: " << C << std::endl;
 
-	// Return indicies of inliers from fitted line with most inliers
-	
-	return inliersResult;
+        denominator = sqrt(pow(A, 2.0f) + pow(B, 2.0f));
+        for (j = 0; j < numPoints; j++)
+        {
+            distance = abs(A * cloud->points[j].x + B * cloud->points[j].y + C) / denominator;
+            if (distance < distanceTol)
+            {
+                inliers.push_back(cloud->points[j]);
+            }
+        }
+        numInliers = inliers.size();
+        std::cout << "Number of inliers: " << numInliers << std::endl;
+        if (numInliers > maxInliers)
+        {
+            maxInliers = numInliers;
+            maxInlierLocation = i;
+            std::cout << "New maximum! " << std::endl;
+        }
+        else
+        {
+            std::cout << "Maximum still: " << maxInlierLocation << " - Point 1: " << lines[maxInlierLocation].first
+                << " Point 2: " << lines[maxInlierLocation].second << std::endl;
+        }
+        inlierCount.push_back(numInliers);
+        inliers.clear();
+        lines.push_back(line);
+    }
+    
+    line.first = lines[maxInlierLocation].first;
+    line.second = lines[maxInlierLocation].second;
+    result.keyPoints = line;
+    pointA = cloud->points[line.first];
+    pointB = cloud->points[line.second];
+    A = pointA.y - pointB.y;
+    B = pointB.x - pointA.x;
+    C = ((pointA.x - pointB.x) * pointA.y) + ((pointB.y - pointA.y) * pointA.x);
+    denominator = sqrt(pow(A, 2.0f) + pow(B, 2.0f));
+    for (i = 0; i < numPoints; i++)
+    {
+        distance = abs(A * cloud->points[i].x + B * cloud->points[i].y + C) / denominator;
+        if (distance < distanceTol)
+        {
+            result.inliers.insert(i);
+        }
+    }
+
+	return result;
 
 }
 
@@ -92,18 +164,26 @@ int main ()
 	
 
 	// TODO: Change the max iteration and distance tolerance arguments for Ransac function
-	std::unordered_set<int> inliers = Ransac(cloud, 0, 0);
+    std::unordered_set<int> inliers;
+    std::pair<int, int> keypoints;
+    
+    RANSAC_result result = Ransac(cloud, 50, .5f);
+    inliers = result.inliers;
+    keypoints = result.keyPoints;
 
 	pcl::PointCloud<pcl::PointXYZ>::Ptr  cloudInliers(new pcl::PointCloud<pcl::PointXYZ>());
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudOutliers(new pcl::PointCloud<pcl::PointXYZ>());
+    pcl::PointCloud<pcl::PointXYZ>::Ptr cloudKeyPoints(new pcl::PointCloud<pcl::PointXYZ>());
 
 	for(int index = 0; index < cloud->points.size(); index++)
 	{
 		pcl::PointXYZ point = cloud->points[index];
-		if(inliers.count(index))
-			cloudInliers->points.push_back(point);
-		else
-			cloudOutliers->points.push_back(point);
+        if (index == keypoints.first || index == keypoints.second)
+            cloudKeyPoints->points.push_back(point);
+        else if (inliers.count(index))
+            cloudInliers->points.push_back(point);
+        else
+            cloudOutliers->points.push_back(point);
 	}
 
 
@@ -112,6 +192,7 @@ int main ()
 	{
 		renderPointCloud(viewer,cloudInliers,"inliers",Color(0,1,0));
   		renderPointCloud(viewer,cloudOutliers,"outliers",Color(1,0,0));
+        renderPointCloud(viewer, cloudKeyPoints, "keypoints", Color(0, 0, 1));
 	}
   	else
   	{
