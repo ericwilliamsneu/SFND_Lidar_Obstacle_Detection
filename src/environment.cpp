@@ -42,22 +42,53 @@ void simpleHighway(pcl::visualization::PCLVisualizer::Ptr& viewer)
     // ----------------------------------------------------
     
     // RENDER OPTIONS
-    bool renderScene = true;
-    std::vector<Car> cars = initHighway(renderScene, viewer);
+    bool optRenderScene = false;
+    bool optRenderRays = false;
+    bool optRenderCloud = false;
+    bool optRenderFullObstCloud = false;
+    bool optRenderClusters = true;
+    bool optRenderBoundingBoxes = true;
+    bool optRenderPlane = false;
+
+    std::vector<Car> cars = initHighway(optRenderScene, viewer);
     
     //Create LIDAR sensor
     Lidar* lidar = new Lidar(cars,0.0);
     pcl::PointCloud<pcl::PointXYZ>::Ptr inputCloud = lidar->scan();
-    //renderRays(viewer,lidar->position,inputCloud);
-    //renderPointCloud(viewer,inputCloud,"inputCloud");
+    if(optRenderRays)
+        renderRays(viewer,lidar->position,inputCloud);
+    if(optRenderCloud)
+        renderPointCloud(viewer,inputCloud,"inputCloud");
 
     //Create point processor
     ProcessPointClouds<pcl::PointXYZ> pointProcessor;
     std::pair<pcl::PointCloud<pcl::PointXYZ>::Ptr, pcl::PointCloud<pcl::PointXYZ>::Ptr> segmentCloud =
         pointProcessor.SegmentPlane(inputCloud, 20, 0.2);
-    renderPointCloud(viewer, segmentCloud.first, "obstCloud", Color(1, 0, 0));
-    renderPointCloud(viewer, segmentCloud.second, "planeCloud", Color(0, 1, 0));
-  
+    if (optRenderFullObstCloud)
+    {
+        renderPointCloud(viewer, segmentCloud.second, "obstCloud", Color(1, 0, 0));
+    }
+
+    std::vector<pcl::PointCloud<pcl::PointXYZ>::Ptr> clusters = pointProcessor.Clustering(segmentCloud.second, 1.0, 3, 50);
+    std::vector<Color> Colors = { Color(1,0,0), Color(0,1,0), Color(0,0,1) };
+
+    int i = 0;
+    for (auto& cluster : clusters)
+    {
+        Box box = pointProcessor.BoundingBox(cluster);
+        if(optRenderClusters)
+            renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(i), Colors[i % Colors.size()]);
+        if(optRenderBoundingBoxes)
+            renderBox(viewer, box, i);
+        i++;
+    }
+
+    if(optRenderPlane)
+        renderPointCloud(viewer, segmentCloud.first, "planeCloud", Color(0, 1, 0));
+
+    
+
+    
 }
 
 

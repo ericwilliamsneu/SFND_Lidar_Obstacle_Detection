@@ -15,9 +15,7 @@ add_definitions(${PCL_DEFINITIONS})
 list(REMOVE_ITEM PCL_LIBRARIES "vtkproj4")
 
 
-#add_executable (environment src/environment.cpp src/render/render.cpp src/processPointClouds.cpp)
-#target_link_libraries (environment ${PCL_LIBRARIES})
-
-add_subdirectory (src/quiz/cluster/)
+add_executable (environment src/environment.cpp src/render/render.cpp src/processPointClouds.cpp)
+target_link_libraries (environment ${PCL_LIBRARIES})
 
 
