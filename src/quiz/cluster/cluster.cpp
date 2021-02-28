@@ -78,14 +78,25 @@ void render2DTree(Node* node, pcl::visualization::PCLVisualizer::Ptr& viewer, Bo
 void proximity(const int id, const std::vector<std::vector<float>>& points, std::vector<int>& cluster, std::vector<bool>& processed,
     KdTree* tree, const float distanceTol)
 {
-    processed[id] = true;
+    std::cout << "Processing node [" << id << "]..." << std::endl;
+
+	processed[id] = true;
     cluster.push_back(id);
     std::vector<int> nearby = tree->search(points[id], distanceTol);
+
+	std::cout << "Neighby neighbors found: [";
+	for(int i = 0; i < nearby.size(); i++)
+	{
+		std::cout << nearby[i] << ",";
+	}
+	std::cout << "]" << std::endl;
+
     for (int i = 0; i < nearby.size(); i++)
     {
-        if (!processed[i])
+        if (!processed[nearby[i]])
         {
-            proximity(i, points, cluster, processed, tree, distanceTol);
+			std::cout << "Neighbor [" << nearby[i] << "] not processed, clustering..." << std::endl;
+            proximity(nearby[i], points, cluster, processed, tree, distanceTol);
         }
     }
 }
@@ -95,19 +106,25 @@ std::vector<std::vector<int>> euclideanCluster(const std::vector<std::vector<flo
 	// TODO: Fill out this function to return list of indices for each cluster
 	std::vector<std::vector<int>> clusters;
     std::vector<bool> processed(points.size(),false);
-    std::cout << "Clustering points..." << std::endl;
-    for (int i = 0; i < points.size(); i++)
+    
+	std::cout << "Clustering points..." << std::endl;
+    
+	for (int i = 0; i < points.size(); i++)
     {
         std::cout << "Checking ID [" << i << "]..." << std::endl;
-        if (!processed[i])
+        
+		if (!processed[i])
         {
             std::cout << "Node not yet processed, clustering..." << std::endl;
-            std::vector<int> cluster;
+            
+			std::vector<int> cluster;
             proximity(i, points, cluster, processed, tree, distanceTol);
-            std::cout << "Cluster created with nodes: ";
+            
+			std::cout << "Cluster created with nodes: ";
             for (std::vector<int>::const_iterator i = cluster.begin(); i != cluster.end(); ++i) std::cout << *i << ",";
             std::cout << std::endl;
-            clusters.push_back(cluster);
+            
+			clusters.push_back(cluster);
         }
     }
 	return clusters;
@@ -140,7 +157,7 @@ int main ()
   	render2DTree(tree->root,viewer,window, it);
   
   	std::cout << "Test Search (-6,7)@3.0: " << std::endl;
-  	std::vector<int> nearby = tree->search({-6,7},3.0);
+  	std::vector<int> nearby = tree->search(points[4],3.0);
   	for(int index : nearby)
       std::cout << index << ",";
   	std::cout << std::endl;
