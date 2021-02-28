@@ -96,8 +96,6 @@ struct KdTree
 		searchHelper(root, target, distanceTol, 0, ids);
 		return ids;
 	}
-	
-
 };
 
 
