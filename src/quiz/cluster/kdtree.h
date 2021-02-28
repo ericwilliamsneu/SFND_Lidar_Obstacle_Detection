@@ -76,15 +76,15 @@ struct KdTree
 					ids.push_back(node->id);
 				}
 			}
-			if (node->point[dimension] <= target[dimension] + distanceTol)
+			if ((target[dimension] + distanceTol) > node->point[dimension])
 			{
-				std::cout << "Target smaller in dimension... searching left" << std::endl;
-				searchHelper(node->left, target, distanceTol, depth + 1, ids);
-			}
-			if (node->point[dimension] >= target[dimension] - distanceTol)
-			{
-				std::cout << "Target is equal or larger... searching right" << std::endl;
+				std::cout << "Target is to the right... searching right" << std::endl;
 				searchHelper(node->right, target, distanceTol, depth + 1, ids);
+			}
+			if ((target[dimension] - distanceTol) < node->point[dimension])
+			{
+				std::cout << "Target is to the left... searching left" << std::endl;
+				searchHelper(node->left, target, distanceTol, depth + 1, ids);
 			}
 		}
 	}
