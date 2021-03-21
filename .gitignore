@@ -1,3 +1,5 @@
 *.patch
 .vs/
 out/
+.vscode/
+build/
