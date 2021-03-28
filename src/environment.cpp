@@ -115,15 +115,47 @@ void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& vi
 
 void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, pcl::visualization::PCLVisualizer::Ptr& viewer2)
 {
-    ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
-    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("C:\\source\\SFND_Lidar_Obstacle_Detection\\src\\sensors\\data\\pcd\\data_1\\0000000000.pcd");
+    // RENDER OPTIONS
+    bool optRenderFullObstCloud = false;
+    bool optRenderClusters = true;
+    bool optRenderBoundingBoxes = true;
+    bool optRenderPlane = true;
+
+    
+    ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
+    pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessor->loadPcd("C:\\source\\SFND_Lidar_Obstacle_Detection\\src\\sensors\\data\\pcd\\data_1\\0000000000.pcd");
     //pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
     renderPointCloud(viewer, inputCloud, "Input");
+    
+    //Downsample and filter
     Eigen::Vector4f min, max;
-    min << -10, -10, -10, 0;
-    max << 20, 10, 10, 1;
-    pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud = pointProcessorI->FilterCloud(inputCloud, 0.25, min,max);
-    renderPointCloud(viewer2, filteredCloud, "Filtered");
+    min << -10, -7.5, -5, 0;
+    max << 30, 7.5, 10, 1;
+    float filterRes = 0.2;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud = pointProcessor->FilterCloud(inputCloud, 0.2, min, max);
+
+    std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_segments =
+        pointProcessor->SegmentPlane(filteredCloud, 20, 0.25);
+    
+    if (optRenderPlane)
+        renderPointCloud(viewer2, cloud_segments.first, "GroundPlane", Color(0, 1, 0));
+    if (optRenderFullObstCloud)
+        renderPointCloud(viewer2, cloud_segments.second, "Obstacles", Color(1, 0, 0));
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> clusters = pointProcessor->Clustering(cloud_segments.second, 2.0, 3, 500);
+    std::vector<Color> Colors = { Color(1,0,0), Color(0,1,0), Color(0,0,1) };
+
+    int i = 0;
+    for (auto& cluster : clusters)
+    {
+        Box box = pointProcessor->BoundingBox(cluster);
+        if (optRenderClusters)
+            renderPointCloud(viewer2, cluster, "obstCloud" + std::to_string(i), Colors[i % Colors.size()]);
+        if (optRenderBoundingBoxes)
+            renderBox(viewer2, box, i);
+        i++;
+    }
+
 }
 
 int main (int argc, char** argv)
