@@ -113,27 +113,30 @@ void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& vi
         viewer->addCoordinateSystem (1.0);
 }
 
-void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer)
+void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, pcl::visualization::PCLVisualizer::Ptr& viewer2)
 {
     ProcessPointClouds<pcl::PointXYZI>* pointProcessorI = new ProcessPointClouds<pcl::PointXYZI>();
     pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("C:\\source\\SFND_Lidar_Obstacle_Detection\\src\\sensors\\data\\pcd\\data_1\\0000000000.pcd");
     //pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud = pointProcessorI->loadPcd("../src/sensors/data/pcd/data_1/0000000000.pcd");
+    renderPointCloud(viewer, inputCloud, "Input");
     Eigen::Vector4f min, max;
-    min << 0, 0, 0, 0;
-    max << 0, 0, 0, 0;
-    pointProcessorI->FilterCloud(inputCloud, 0.5, min,max);
-    renderPointCloud(viewer,inputCloud,"inputCloud");
+    min << -10, -10, -10, 0;
+    max << 20, 10, 10, 1;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr filteredCloud = pointProcessorI->FilterCloud(inputCloud, 0.25, min,max);
+    renderPointCloud(viewer2, filteredCloud, "Filtered");
 }
 
 int main (int argc, char** argv)
 {
     std::cout << "starting enviroment" << std::endl;
 
-    pcl::visualization::PCLVisualizer::Ptr viewer (new pcl::visualization::PCLVisualizer ("3D Viewer"));
+    pcl::visualization::PCLVisualizer::Ptr viewer  (new pcl::visualization::PCLVisualizer ("Input Viewer"));
+    pcl::visualization::PCLVisualizer::Ptr viewer2 (new pcl::visualization::PCLVisualizer("Filtered Viewer"));
     CameraAngle setAngle = XY;
     initCamera(setAngle, viewer);
+    initCamera(setAngle, viewer2);
     //simpleHighway(viewer);
-    cityBlock(viewer);
+    cityBlock(viewer,viewer2);
 
     while (!viewer->wasStopped ())
     {

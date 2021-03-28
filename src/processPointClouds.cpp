@@ -28,20 +28,47 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::FilterCloud(ty
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
 
-    // TODO:: Fill in the function to do voxel grid point reduction and region based filtering
+    //Fill in the function to do voxel grid point reduction and region based filtering
+
+    //Filter cloud using VoxelGrid
+    typename pcl::PointCloud<PointT>::Ptr filteredCloud(new pcl::PointCloud<PointT>);
     pcl::VoxelGrid<PointT> sor;
     sor.setInputCloud(cloud);
     Eigen::Vector4f leafsize;
     leafsize << filterRes, filterRes, filterRes, filterRes;
     sor.setLeafSize(leafsize);
-    sor.filter(*cloud);
-    std::cout << "Points remaining in filtered cloud: " << cloud->points.size() << std::endl;
+    sor.filter(*filteredCloud);
+
+    std::cout << "VoxelGrid filtering removed (# points): " << 
+        (cloud->points.size() - filteredCloud->points.size())
+        << std::endl;
+
+    //Apply Region of Interest
+    typename pcl::PointCloud<PointT>::Ptr croppedCloud(new pcl::PointCloud<PointT>);
+    pcl::CropBox<PointT> roi(true);
+    roi.setMax(maxPoint);
+    roi.setMin(minPoint);
+    roi.setInputCloud(filteredCloud);
+    roi.filter(*croppedCloud);
+
+    //Remove Rooftop Points
+    typename pcl::PointCloud<PointT>::Ptr roofRemoved(new pcl::PointCloud<PointT>);
+    pcl::CropBox<PointT> roof(true);
+    roof.setMin(Eigen::Vector4f(-1.5, -1.7, -1, 1));
+    roof.setMax(Eigen::Vector4f(2.6, 1.7, -0.4, 1));
+    roof.setInputCloud(croppedCloud);
+    roof.setNegative(true);
+    roof.filter(*roofRemoved);
+
+    std::cout << "CropBox filtering removed (# points): " <<
+        (filteredCloud->points.size() - croppedCloud->points.size())
+        << std::endl;
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "filtering took " << elapsedTime.count() << " milliseconds" << std::endl;
 
-    return cloud;
+    return roofRemoved;
 
 }
 
