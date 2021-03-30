@@ -79,13 +79,115 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     return segResult;
 }
 
+template <typename PointT>
+pcl::PointIndices::Ptr RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceTol)
+{
+    pcl::PointIndices::Ptr result(new pcl::PointIndices());
+    std::tuple<int, int, int> keyPoints;
+    int numPoints = cloud->points.size();
+    std::vector < std::tuple<int, int, int> > planes;
+    std::tuple <int, int, int> plane;
+    std::vector <int> inlierCount;
+    int numInliers = 0;
+    int maxInliers = 0;
+    int maxInlierLocation = 0;
+    std::vector<PointT> inliers;
+    int rand_a, rand_b, rand_c;
+    float A = 0.0, B = 0.0, C = 0.0, D = 0.0;
+    float distance = 0.0;
+    float denominator = 0.0;
+    typename PointT pointA, pointB, pointC;
+    int i = 0, j = 0, k = 0;
+    bool validPoints = false;
+
+    srand(time(NULL));
+
+    for (int i = 0; i < maxIterations; i++)
+    {
+        while (!validPoints)
+        {
+            rand_a = rand() % numPoints;
+            rand_b = rand() % numPoints;
+            rand_c = rand() % numPoints;
+            if (rand_a != rand_b && rand_a != rand_c && rand_b != rand_c) validPoints = true;
+        }
+        validPoints = false;
+        plane = std::make_tuple(rand_a, rand_b, rand_c);
+        planes.push_back(plane);
+        std::cout << "Iteration #" << i << ":(Point_1=" << std::get<0>(plane) << ") & (Point_2="
+            << std::get<1>(plane) << ") & (Point_3=" << std::get<2>(plane) << ")" << std::endl;
+        pointA = cloud->points[std::get<0>(plane)];
+        pointB = cloud->points[std::get<1>(plane)];
+        pointC = cloud->points[std::get<2>(plane)];
+        std::cout << "Point_1=(X:" << pointA.x << ",Y:" << pointA.y << ")//Point_2=(X:" << pointB.x
+            << ",Y:" << pointB.y << ")//Point_3=(X:" << pointC.x << ",Y:" << pointC.y << ")" << std::endl;
+        A = ((pointB.y - pointA.y) * (pointC.z - pointA.z)) - ((pointB.z - pointA.z) * (pointC.y - pointA.y));
+        B = ((pointB.z - pointA.z) * (pointC.x - pointA.x)) - ((pointB.x - pointA.x) * (pointC.z - pointA.z));
+        C = ((pointB.x - pointA.x) * (pointC.y - pointA.y)) - ((pointB.y - pointA.y) * (pointC.x - pointA.x));
+        D = -(A * pointA.x + B * pointA.y + C * pointA.z);
+        std::cout << "A: " << A << " B: " << B << " C: " << C << " D: " << D << std::endl;
+
+        denominator = sqrt(pow(A, 2.0f) + pow(B, 2.0f) + pow(C, 2.0f));
+        for (j = 0; j < numPoints; j++)
+        {
+            distance = abs((A * cloud->points[j].x) + (B * cloud->points[j].y) + (C * cloud->points[j].z) + D) / denominator;
+            if (distance < distanceTol)
+            {
+                inliers.push_back(cloud->points[j]);
+            }
+        }
+        numInliers = inliers.size();
+        std::cout << "Number of inliers: " << numInliers << std::endl;
+        if (numInliers > maxInliers)
+        {
+            maxInliers = numInliers;
+            maxInlierLocation = i;
+            std::cout << "New maximum! " << std::endl;
+        }
+        else
+        {
+            std::cout << "Maximum still: " << maxInlierLocation << " - Point 1: " << std::get<0>(planes[maxInlierLocation])
+                << " Point 2: " << std::get<1>(planes[maxInlierLocation]) << "Point 3: " <<
+                std::get<2>(planes[maxInlierLocation]) << std::endl;
+        }
+        inlierCount.push_back(numInliers);
+        inliers.clear();
+    }
+
+    plane = std::make_tuple(std::get<0>(planes[maxInlierLocation]), std::get<1>(planes[maxInlierLocation]), std::get<2>(planes[maxInlierLocation]));
+    keyPoints = plane;
+
+    pointA = cloud->points[std::get<0>(plane)];
+    pointB = cloud->points[std::get<1>(plane)];
+    pointC = cloud->points[std::get<2>(plane)];
+    A = ((pointB.y - pointA.y) * (pointC.z - pointA.z)) - ((pointB.z - pointA.z) * (pointC.y - pointA.y));
+    B = ((pointB.z - pointA.z) * (pointC.x - pointA.x)) - ((pointB.x - pointA.x) * (pointC.z - pointA.z));
+    C = ((pointB.x - pointA.x) * (pointC.y - pointA.y)) - ((pointB.y - pointA.y) * (pointC.x - pointA.x));
+    D = -(A * pointA.x + B * pointA.y + C * pointA.z);
+    denominator = sqrt(pow(A, 2.0f) + pow(B, 2.0f) + pow(C, 2.0f));
+    std::cout << "Best plane found: ";
+    std::cout << "A: " << A << " B: " << B << " C: " << C << " D: " << D << std::endl;
+
+    for (i = 0; i < numPoints; i++)
+    {
+        distance = abs((A * cloud->points[i].x) + (B * cloud->points[i].y) + (C * cloud->points[i].z) + D) / denominator;
+        if (distance < distanceTol)
+        {
+            result->indices.push_back(i);
+        }
+    }
+
+    return result;
+
+}
 
 template<typename PointT>
-std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::SegmentPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
+std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr>
+    ProcessPointClouds<PointT>::SegmentPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
 {
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
-
+#if 0
     pcl::SACSegmentation<PointT> seg;
     pcl::PointIndices::Ptr inliers {new pcl::PointIndices};
     pcl::ModelCoefficients::Ptr coefficients {new pcl::ModelCoefficients};
@@ -103,26 +205,27 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     {
         std::cout << "Could not estimate a planar model" << std::endl;
     }
+#endif
+
+    pcl::PointIndices::Ptr inliers = RansacPlane<PointT>(cloud, maxIterations, distanceThreshold);
 
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "plane segmentation took " << elapsedTime.count() << " milliseconds" << std::endl;
 
-    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult = SeparateClouds(inliers,cloud);
+    std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> segResult;
+    segResult = SeparateClouds(inliers, cloud);
     return segResult;
 }
-
 
 template<typename PointT>
 std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::Clustering(typename pcl::PointCloud<PointT>::Ptr cloud, float clusterTolerance, int minSize, int maxSize)
 {
-
     // Time clustering process
     auto startTime = std::chrono::steady_clock::now();
 
     std::vector<typename pcl::PointCloud<PointT>::Ptr> clusters;
 
-    // TODO:: Fill in the function to perform euclidean clustering to group detected obstacles
     typename pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
     tree->setInputCloud(cloud);
 
@@ -155,7 +258,6 @@ std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::C
     return clusters;
 }
 
-
 template<typename PointT>
 Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Ptr cluster)
 {
@@ -174,7 +276,6 @@ Box ProcessPointClouds<PointT>::BoundingBox(typename pcl::PointCloud<PointT>::Pt
 
     return box;
 }
-
 
 template<typename PointT>
 void ProcessPointClouds<PointT>::savePcd(typename pcl::PointCloud<PointT>::Ptr cloud, std::string file)
@@ -198,7 +299,6 @@ typename pcl::PointCloud<PointT>::Ptr ProcessPointClouds<PointT>::loadPcd(std::s
 
     return cloud;
 }
-
 
 template<typename PointT>
 std::vector<boost::filesystem::path> ProcessPointClouds<PointT>::streamPcd(std::string dataPath)
