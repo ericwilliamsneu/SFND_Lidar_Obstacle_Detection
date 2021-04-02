@@ -114,14 +114,16 @@ void initCamera(CameraAngle setAngle, pcl::visualization::PCLVisualizer::Ptr& vi
 }
 
 //void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, pcl::visualization::PCLVisualizer::Ptr& viewer2)
-void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointClouds<pcl::PointXYZI>* pointProcessor, const pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
+void cityBlock(pcl::visualization::PCLVisualizer::Ptr& inputViewer, pcl::visualization::PCLVisualizer::Ptr& outputViewer, ProcessPointClouds<pcl::PointXYZI>* pointProcessor, const pcl::PointCloud<pcl::PointXYZI>::Ptr& inputCloud)
 {
     // RENDER OPTIONS
     bool optRenderFullObstCloud = false;
     bool optRenderClusters = true;
-    bool optRenderBoundingBoxes = true;
+    bool optRenderBoundingBoxes = false;
     bool optRenderPlane = false;
     
+    renderPointCloud(inputViewer, inputCloud, "Input");
+
     //Downsample and filter
     Eigen::Vector4f min, max;
     min << -10, -6, -2, 0;
@@ -132,12 +134,15 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
     std::pair<pcl::PointCloud<pcl::PointXYZI>::Ptr, pcl::PointCloud<pcl::PointXYZI>::Ptr> cloud_segments =
         pointProcessor->SegmentPlane(filteredCloud, 20, 0.25);
     
-    if (optRenderPlane)
-        renderPointCloud(viewer, cloud_segments.first, "GroundPlane", Color(0, 1, 0));
-    if (optRenderFullObstCloud)
-        renderPointCloud(viewer, cloud_segments.second, "Obstacles", Color(1, 0, 0));
+    pcl::PointCloud<pcl::PointXYZI>::Ptr groundCloud = cloud_segments.first;
+    pcl::PointCloud<pcl::PointXYZI>::Ptr obstacleCloud = cloud_segments.second;
 
-    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> clusters = pointProcessor->Clustering(cloud_segments.second, .5, 20, 300);
+    if (optRenderPlane)
+        renderPointCloud(outputViewer, groundCloud, "GroundPlane", Color(0, 1, 0));
+    if (optRenderFullObstCloud)
+        renderPointCloud(outputViewer, obstacleCloud, "Obstacles", Color(1, 0, 0));
+
+    std::vector<pcl::PointCloud<pcl::PointXYZI>::Ptr> clusters = pointProcessor->Clustering(obstacleCloud, .5, 20, 300);
     std::vector<Color> Colors = { Color(1,0,0), Color(0,0,1), Color(1,1,0)};
 
     int i = 0;
@@ -145,9 +150,12 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& viewer, ProcessPointCloud
     {
         Box box = pointProcessor->BoundingBox(cluster);
         if (optRenderClusters)
-            renderPointCloud(viewer, cluster, "obstCloud" + std::to_string(i), Colors[i++ % Colors.size()]);
+            renderPointCloud(outputViewer, cluster, "obstCloud" + std::to_string(i), Colors[i % Colors.size()]);
         if (optRenderBoundingBoxes)
-            renderBox(viewer, box, i);
+            renderBox(outputViewer, box, i);
+        i++;
+
+        renderBox(inputViewer, box, i);
     }
 
 }
@@ -161,7 +169,7 @@ int main (int argc, char** argv)
     initCamera(outputAngle, outputViewer);
 
     pcl::visualization::PCLVisualizer::Ptr inputViewer(new pcl::visualization::PCLVisualizer("Input"));
-    CameraAngle inputAngle = FPS;
+    CameraAngle inputAngle = XY;
     initCamera(inputAngle, inputViewer);
     
     ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
@@ -177,11 +185,9 @@ int main (int argc, char** argv)
         inputViewer->removeAllPointClouds();
         inputViewer->removeAllShapes();
 
-
         // Load pcd and run obstacle detection process
         inputCloud = pointProcessor->loadPcd((*streamIterator).string());
-        renderPointCloud(inputViewer, inputCloud, "InputCloud");
-        cityBlock(outputViewer, pointProcessor, inputCloud);
+        cityBlock(inputViewer, outputViewer, pointProcessor, inputCloud);
 
         streamIterator++;
         if (streamIterator == stream.end())
