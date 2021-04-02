@@ -114,18 +114,24 @@ pcl::PointIndices::Ptr RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, 
         validPoints = false;
         plane = std::make_tuple(rand_a, rand_b, rand_c);
         planes.push_back(plane);
+#ifdef PRINT_DEBUG
         std::cout << "Iteration #" << i << ":(Point_1=" << std::get<0>(plane) << ") & (Point_2="
             << std::get<1>(plane) << ") & (Point_3=" << std::get<2>(plane) << ")" << std::endl;
+#endif
         pointA = cloud->points[std::get<0>(plane)];
         pointB = cloud->points[std::get<1>(plane)];
         pointC = cloud->points[std::get<2>(plane)];
+#ifdef PRINT_DEBUG
         std::cout << "Point_1=(X:" << pointA.x << ",Y:" << pointA.y << ")//Point_2=(X:" << pointB.x
             << ",Y:" << pointB.y << ")//Point_3=(X:" << pointC.x << ",Y:" << pointC.y << ")" << std::endl;
+#endif
         A = ((pointB.y - pointA.y) * (pointC.z - pointA.z)) - ((pointB.z - pointA.z) * (pointC.y - pointA.y));
         B = ((pointB.z - pointA.z) * (pointC.x - pointA.x)) - ((pointB.x - pointA.x) * (pointC.z - pointA.z));
         C = ((pointB.x - pointA.x) * (pointC.y - pointA.y)) - ((pointB.y - pointA.y) * (pointC.x - pointA.x));
         D = -(A * pointA.x + B * pointA.y + C * pointA.z);
+#ifdef PRINT_DEBUG
         std::cout << "A: " << A << " B: " << B << " C: " << C << " D: " << D << std::endl;
+#endif
 
         denominator = sqrt(pow(A, 2.0f) + pow(B, 2.0f) + pow(C, 2.0f));
         for (j = 0; j < numPoints; j++)
@@ -137,18 +143,24 @@ pcl::PointIndices::Ptr RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, 
             }
         }
         numInliers = inliers.size();
+#ifdef PRINT_DEBUG
         std::cout << "Number of inliers: " << numInliers << std::endl;
+#endif
         if (numInliers > maxInliers)
         {
             maxInliers = numInliers;
             maxInlierLocation = i;
+#ifdef PRINT_DEBUG
             std::cout << "New maximum! " << std::endl;
+#endif
         }
         else
         {
+#ifdef PRINT_DEBUG
             std::cout << "Maximum still: " << maxInlierLocation << " - Point 1: " << std::get<0>(planes[maxInlierLocation])
                 << " Point 2: " << std::get<1>(planes[maxInlierLocation]) << "Point 3: " <<
                 std::get<2>(planes[maxInlierLocation]) << std::endl;
+#endif
         }
         inlierCount.push_back(numInliers);
         inliers.clear();
@@ -165,8 +177,10 @@ pcl::PointIndices::Ptr RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, 
     C = ((pointB.x - pointA.x) * (pointC.y - pointA.y)) - ((pointB.y - pointA.y) * (pointC.x - pointA.x));
     D = -(A * pointA.x + B * pointA.y + C * pointA.z);
     denominator = sqrt(pow(A, 2.0f) + pow(B, 2.0f) + pow(C, 2.0f));
+#ifdef PRINT_DEBUG
     std::cout << "Best plane found: ";
     std::cout << "A: " << A << " B: " << B << " C: " << C << " D: " << D << std::endl;
+#endif
 
     for (i = 0; i < numPoints; i++)
     {
@@ -181,13 +195,15 @@ pcl::PointIndices::Ptr RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, 
 
 }
 
+#define _USING_PCL_TOOLS_
+
 template<typename PointT>
 std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr>
     ProcessPointClouds<PointT>::SegmentPlane(typename pcl::PointCloud<PointT>::Ptr cloud, int maxIterations, float distanceThreshold)
 {
     // Time segmentation process
     auto startTime = std::chrono::steady_clock::now();
-#if 0
+#ifdef _USING_PCL_TOOLS_
     pcl::SACSegmentation<PointT> seg;
     pcl::PointIndices::Ptr inliers {new pcl::PointIndices};
     pcl::ModelCoefficients::Ptr coefficients {new pcl::ModelCoefficients};
@@ -205,10 +221,9 @@ std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT
     {
         std::cout << "Could not estimate a planar model" << std::endl;
     }
-#endif
-
+#else
     pcl::PointIndices::Ptr inliers = RansacPlane<PointT>(cloud, maxIterations, distanceThreshold);
-
+#endif
     auto endTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
     std::cout << "plane segmentation took " << elapsedTime.count() << " milliseconds" << std::endl;

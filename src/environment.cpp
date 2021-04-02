@@ -156,29 +156,37 @@ int main (int argc, char** argv)
 {
     std::cout << "starting enviroment" << std::endl;
 
-    pcl::visualization::PCLVisualizer::Ptr viewer  (new pcl::visualization::PCLVisualizer ("Viewer"));
-    CameraAngle setAngle = XY;
-    initCamera(setAngle, viewer);
-    simpleHighway(viewer);
+    pcl::visualization::PCLVisualizer::Ptr outputViewer  (new pcl::visualization::PCLVisualizer ("Output"));
+    CameraAngle outputAngle = XY;
+    initCamera(outputAngle, outputViewer);
+
+    pcl::visualization::PCLVisualizer::Ptr inputViewer(new pcl::visualization::PCLVisualizer("Input"));
+    CameraAngle inputAngle = FPS;
+    initCamera(inputAngle, inputViewer);
     
     ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
-    std::vector<boost::filesystem::path> stream = pointProcessor->streamPcd("C:\\source\\SFND_Lidar_Obstacle_Detection\\src\\sensors\\data\\pcd\\data_1");
+    std::vector<boost::filesystem::path> stream = pointProcessor->streamPcd("C:\\source\\SFND_Lidar_Obstacle_Detection\\src\\sensors\\data\\pcd\\data_2");
     auto streamIterator = stream.begin();
     pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud;
 
-    while (!viewer->wasStopped ())
+    while (!outputViewer->wasStopped () && !inputViewer->wasStopped())
     {
-        // Clear viewer
-        viewer->removeAllPointClouds();
-        viewer->removeAllShapes();
+        // Clear viewer(s)
+        outputViewer->removeAllPointClouds();
+        outputViewer->removeAllShapes();
+        inputViewer->removeAllPointClouds();
+        inputViewer->removeAllShapes();
+
 
         // Load pcd and run obstacle detection process
         inputCloud = pointProcessor->loadPcd((*streamIterator).string());
-        cityBlock(viewer, pointProcessor, inputCloud);
+        renderPointCloud(inputViewer, inputCloud, "InputCloud");
+        cityBlock(outputViewer, pointProcessor, inputCloud);
 
         streamIterator++;
         if (streamIterator == stream.end())
             streamIterator = stream.begin();
-        viewer->spinOnce ();
+        outputViewer->spinOnce ();
+        inputViewer->spinOnce();
     } 
 }
