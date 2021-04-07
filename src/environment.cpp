@@ -205,6 +205,11 @@ void cityBlock(pcl::visualization::PCLVisualizer::Ptr& outputViewer, ProcessPoin
 
 int main (int argc, char** argv)
 {
+    
+    if(argc < 2){
+        std::cerr << "Must specify PCD directory" << std::endl;
+    }
+    
     std::cout << "starting enviroment" << std::endl;
 
     pcl::visualization::PCLVisualizer::Ptr outputViewer  (new pcl::visualization::PCLVisualizer ("Output"));
@@ -218,7 +223,7 @@ int main (int argc, char** argv)
 #endif
     
     ProcessPointClouds<pcl::PointXYZI>* pointProcessor = new ProcessPointClouds<pcl::PointXYZI>();
-    std::vector<boost::filesystem::path> stream = pointProcessor->streamPcd("C:\\source\\SFND_Lidar_Obstacle_Detection\\src\\sensors\\data\\pcd\\data_2");
+    std::vector<boost::filesystem::path> stream = pointProcessor->streamPcd(argv[1]);
     auto streamIterator = stream.begin();
     pcl::PointCloud<pcl::PointXYZI>::Ptr inputCloud;
 

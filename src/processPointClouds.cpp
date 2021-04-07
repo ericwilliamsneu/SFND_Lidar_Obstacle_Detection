@@ -66,7 +66,7 @@ template<typename PointT>
 std::pair<typename pcl::PointCloud<PointT>::Ptr, typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<PointT>::SeparateClouds(pcl::PointIndices::Ptr inliers, typename pcl::PointCloud<PointT>::Ptr cloud) 
 {
   // TODO: Create two new point clouds, one cloud with obstacles and other with segmented plane
-    pcl::PointCloud<PointT>::Ptr positives(new pcl::PointCloud<PointT>), negatives(new pcl::PointCloud<PointT>);
+    typename pcl::PointCloud<PointT>::Ptr positives(new pcl::PointCloud<PointT>), negatives(new pcl::PointCloud<PointT>);
     pcl::ExtractIndices<PointT> extract;
     extract.setInputCloud(cloud);
     extract.setIndices(inliers);
@@ -149,7 +149,7 @@ typename std::vector<typename pcl::PointCloud<PointT>::Ptr> ProcessPointClouds<P
             std::cout << "Node not yet processed, clustering..." << std::endl;
 #endif
 
-            pcl::PointCloud<PointT>::Ptr cluster(new pcl::PointCloud<PointT>());
+            typename pcl::PointCloud<PointT>::Ptr cluster(new pcl::PointCloud<PointT>());
             ProcessPointClouds<PointT>::proximity(i,inputCloud, cluster, processed, tree, distanceTol);
 
 #ifdef PRINT_DEBUG
@@ -181,7 +181,7 @@ pcl::PointIndices::Ptr RansacPlane(typename pcl::PointCloud<PointT>::Ptr cloud, 
     float A = 0.0, B = 0.0, C = 0.0, D = 0.0;
     float distance = 0.0;
     float denominator = 0.0;
-    typename PointT pointA, pointB, pointC;
+    PointT pointA, pointB, pointC;
     int i = 0, j = 0, k = 0;
     bool validPoints = false;
 
