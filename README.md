@@ -67,7 +67,7 @@ The workspace provided in the SFND classroom comes preinstallated with everythin
    mkdir build && cd build
    cmake ..
    make
-   ./environment
+   ./environment ../src/sensors/data/pcd/data_2/
    ```
 
    This should install the latest version of PCL. You should be able to do all the classroom exercises and project with this setup.
@@ -109,7 +109,7 @@ The workspace provided in the SFND classroom comes preinstallated with everythin
    mkdir build && cd build
    cmake ..
    make
-   ./environment
+   ./environment ../sensors/data/pcd/data_2/
    ```
 
 ### WINDOWS
@@ -134,7 +134,7 @@ The workspace provided in the SFND classroom comes preinstallated with everythin
    mkdir build && cd build
    cmake ..
    make
-   ./environment
+   ./environment ..\sensors\data\pcd\data_2\
    ```
 
 #### Build from Source
